@@ -33,7 +33,7 @@ app.use(session({
 }));
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 function requireAuth(req, res, next) {
   if (req.session && req.session.user) return next();
