@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FiveM Logs — Connexion</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070910;
+    --accent: #00d4ff;
+    --err: #ff3860;
+    --warn: #ffcc00;
+    --text: #c8d6e5;
+    --dim: #3a4556;
+    --discord: #5865F2;
+    --mono: 'Share Tech Mono', monospace;
+    --ui: 'Rajdhani', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--ui);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Grille de fond animée */
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridPan 20s linear infinite;
+  }
+
+  @keyframes gridPan {
+    from { transform: translateY(0); }
+    to   { transform: translateY(40px); }
+  }
+
+  /* Lueur centrale */
+  .bg-glow {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Lignes de scan */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Card */
+  .card {
+    position: relative;
+    z-index: 10;
+    width: 400px;
+    background: rgba(10,14,20,0.95);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 4px;
+    padding: 48px 40px 40px;
+    box-shadow:
+      0 0 60px rgba(0,212,255,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    animation: cardIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Coin décoratif */
+  .card::before, .card::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: var(--accent);
+    border-style: solid;
+    opacity: 0.5;
+  }
+  .card::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+  .card::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+  /* Logo */
+  .logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 36px;
+    gap: 14px;
+  }
+
+  .logo-hex {
+    width: 64px;
+    height: 64px;
+    animation: hexPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes hexPulse {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(0,212,255,0.4)); }
+    50%       { filter: drop-shadow(0 0 20px rgba(0,212,255,0.8)); }
+  }
+
+  .logo-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .logo-title span { color: var(--accent); }
+
+  .logo-sub {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: -8px;
+  }
+
+  /* Séparateur */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--dim);
+    letter-spacing: 0.15em;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+  }
+
+  /* Bouton Discord */
+  .btn-discord {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 20px;
+    background: var(--discord);
+    border: none;
+    border-radius: 3px;
+    color: #fff;
+    font-family: var(--ui);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-discord::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.4s;
+  }
+
+  .btn-discord:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(88,101,242,0.4); }
+  .btn-discord:hover::before { transform: translateX(100%); }
+  .btn-discord:active { transform: translateY(0); }
+
+  /* Icône Discord SVG */
+  .discord-icon { width: 22px; height: 22px; flex-shrink: 0; }
+
+  /* Info accès */
+  .access-info {
+    margin-top: 24px;
+    padding: 14px 16px;
+    background: rgba(0,212,255,0.04);
+    border: 1px solid rgba(0,212,255,0.1);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--dim);
+    line-height: 1.7;
+  }
+
+  .access-info strong { color: var(--accent); }
+
+  /* Messages d'erreur */
+  .error-msg {
+    display: none;
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    background: rgba(255,56,96,0.08);
+    border: 1px solid rgba(255,56,96,0.25);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--err);
+    animation: errIn 0.3s ease;
+  }
+
+  @keyframes errIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .error-msg.show { display: flex; align-items: center; gap: 10px; }
+
+  /* Footer */
+  .footer {
+    margin-top: 28px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="card">
+
+  <div class="logo">
+    <svg class="logo-hex" viewBox="0 0 64 64" fill="none">
+      <polygon points="32,4 58,18 58,46 32,60 6,46 6,18"
+        stroke="#00d4ff" stroke-width="1.5" fill="rgba(0,212,255,0.05)"/>
+      <polygon points="32,12 50,22 50,42 32,52 14,42 14,22"
+        stroke="#00d4ff" stroke-width="0.5" fill="rgba(0,212,255,0.04)"/>
+      <circle cx="32" cy="32" r="7" fill="#00d4ff" opacity="0.9"/>
+      <circle cx="32" cy="32" r="12" stroke="#00d4ff" stroke-width="0.5" stroke-dasharray="3 3" opacity="0.4"/>
+    </svg>
+    <div>
+      <div class="logo-title">Five<span>M</span> Logs</div>
+      <div class="logo-sub">Panneau d'administration</div>
+    </div>
+  </div>
+
+  <!-- Message d'erreur dynamique -->
+  <div class="error-msg" id="errorMsg">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v5M8 11v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span id="errorText"></span>
+  </div>
+
+  <div class="divider">Authentification requise</div>
+
+  <a href="/auth/discord" class="btn-discord">
+    <svg class="discord-icon" viewBox="0 0 24 24" fill="white">
+      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+    </svg>
+    Connexion avec Discord
+  </a>
+
+  <div class="access-info">
+    <strong>Accès réservé</strong> aux membres avec<br>
+    un rôle autorisé sur le serveur Discord.<br>
+    Contacte un administrateur si tu n'as pas accès.
+  </div>
+
+  <div class="footer">FIVEM LOG PANEL &nbsp;·&nbsp; ACCÈS RESTREINT</div>
+</div>
+
+<script>
+  // Affiche les erreurs OAuth depuis l'URL
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get('error');
+  const errors = {
+    no_permission: '⛔ Accès refusé — tu n\'as pas le rôle requis.',
+    auth_failed  : '❌ Erreur d\'authentification Discord. Réessaie.',
+    no_code      : '❌ Code OAuth manquant. Réessaie.',
+  };
+  if (error && errors[error]) {
+    const el = document.getElementById('errorMsg');
+    document.getElementById('errorText').textContent = errors[error];
+    el.classList.add('show');
+  }
+</script>
+</body>
+</html>

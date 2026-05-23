@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FiveM — Console des Logs</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --panel: #0f1318;
+    --border: #1e2530;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --warn: #ffcc00;
+    --err: #ff3860;
+    --ok: #00e676;
+    --text: #c8d6e5;
+    --dim: #4a5568;
+    --mono: 'Share Tech Mono', monospace;
+    --ui: 'Rajdhani', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--ui);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, #0f1318 0%, #111820 100%);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo { display: flex; align-items: center; gap: 14px; }
+
+  .logo-icon { width: 36px; height: 36px; }
+  .logo-icon svg { width: 100%; height: 100%; }
+
+  .logo-text {
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .logo-text span { color: var(--accent); }
+
+  .header-right { display: flex; align-items: center; gap: 20px; }
+
+  /* User badge */
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+  }
+
+  .user-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.05em;
+  }
+
+  .btn-logout {
+    font-family: var(--ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 5px 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .btn-logout:hover { color: var(--err); border-color: var(--err); }
+
+  .header-status { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 0.72rem; }
+  .status-dot::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+    margin-right: 7px;
+    animation: blink 2s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 210px 1fr 230px;
+    height: calc(100vh - 57px);
+  }
+
+  .sidebar { border-right: 1px solid var(--border); padding: 20px 0; overflow-y: auto; }
+  .sidebar-label { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); padding: 0 20px; margin-bottom: 8px; }
+  .sidebar-section { margin-bottom: 28px; }
+
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px; cursor: pointer;
+    font-size: 0.88rem; font-weight: 600; letter-spacing: 0.05em;
+    color: var(--dim); transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .sidebar-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .sidebar-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,212,255,0.05); }
+  .sidebar-item .badge {
+    margin-left: auto; font-family: var(--mono); font-size: 0.68rem;
+    background: rgba(0,212,255,0.1); color: var(--accent); padding: 2px 7px; border-radius: 2px;
+  }
+  .sidebar-item.err-item .badge { background: rgba(255,56,96,0.15); color: var(--err); }
+  .sidebar-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    background: var(--panel); flex-shrink: 0;
+  }
+
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 7px 12px; flex: 1; max-width: 380px;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus-within { border-color: var(--accent); }
+  .search-box input { background: none; border: none; outline: none; color: var(--text); font-family: var(--mono); font-size: 0.8rem; width: 100%; }
+  .search-box input::placeholder { color: var(--dim); }
+
+  .filter-btns { display: flex; gap: 6px; }
+  .filter-btn {
+    font-family: var(--ui); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
+    padding: 5px 12px; border: 1px solid var(--border); border-radius: 2px;
+    cursor: pointer; background: none; color: var(--dim); transition: all 0.15s; text-transform: uppercase;
+  }
+  .filter-btn:hover { color: var(--text); border-color: #2d3748; }
+  .filter-btn.active { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+  .filter-btn.warn.active { background: var(--warn); border-color: var(--warn); color: #000; }
+  .filter-btn.err.active { background: var(--err); border-color: var(--err); color: #fff; }
+
+  .toolbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  .icon-btn {
+    width: 32px; height: 32px; background: none; border: 1px solid var(--border);
+    border-radius: 2px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; color: var(--dim); transition: all 0.15s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: #2d3748; }
+
+  .stats-bar {
+    display: flex; align-items: center; gap: 0;
+    padding: 8px 20px; border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 0.72rem; flex-shrink: 0;
+    background: rgba(0,0,0,0.2);
+  }
+  .stat { display: flex; align-items: center; gap: 6px; padding: 0 20px 0 0; margin-right: 20px; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+  .stat-num { font-size: 1rem; font-weight: bold; }
+  .stat-num.ok { color: var(--ok); }
+  .stat-num.warn { color: var(--warn); }
+  .stat-num.err { color: var(--err); }
+  .stat-num.info { color: var(--accent); }
+  .stat-label { color: var(--dim); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .log-container { flex: 1; overflow-y: auto; font-family: var(--mono); font-size: 0.8rem; }
+  .log-container::-webkit-scrollbar { width: 6px; }
+  .log-container::-webkit-scrollbar-track { background: var(--bg); }
+  .log-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .log-table { width: 100%; border-collapse: collapse; }
+  .log-table thead tr { background: var(--panel); border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+  .log-table th {
+    padding: 8px 16px; text-align: left; font-family: var(--ui);
+    font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--dim); font-weight: 600; white-space: nowrap;
+  }
+
+  .log-row {
+    border-bottom: 1px solid rgba(30,37,48,0.5);
+    cursor: pointer; transition: background 0.1s;
+    animation: rowIn 0.3s ease both;
+  }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+  .log-row:hover { background: rgba(255,255,255,0.025); }
+  .log-row.selected { background: rgba(0,212,255,0.06); }
+  .log-row.level-ERROR { border-left: 2px solid var(--err); }
+  .log-row.level-WARN  { border-left: 2px solid var(--warn); }
+  .log-row.level-INFO  { border-left: 2px solid transparent; }
+  .log-row.level-DEBUG { border-left: 2px solid transparent; opacity: 0.6; }
+
+  .log-table td { padding: 7px 16px; vertical-align: top; white-space: nowrap; }
+  .td-time { color: var(--dim); font-size: 0.72rem; }
+
+  .td-level span {
+    display: inline-block; padding: 1px 7px; border-radius: 2px;
+    font-size: 0.68rem; letter-spacing: 0.1em; font-weight: bold;
+  }
+  .level-badge-INFO  { background: rgba(0,212,255,0.12); color: var(--accent); }
+  .level-badge-WARN  { background: rgba(255,204,0,0.12); color: var(--warn); }
+  .level-badge-ERROR { background: rgba(255,56,96,0.15); color: var(--err); }
+  .level-badge-DEBUG { background: rgba(255,255,255,0.06); color: var(--dim); }
+
+  .td-source { color: var(--accent2); font-size: 0.72rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  .td-msg { color: var(--text); max-width: 0; width: 99%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-msg .highlight { background: rgba(255,204,0,0.25); color: var(--warn); border-radius: 2px; }
+
+  /* Right panel */
+  .right-panel { border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    font-family: var(--ui); font-size: 0.72rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--dim); font-weight: 700;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel-content { flex: 1; overflow-y: auto; padding: 16px; }
+  .panel-content::-webkit-scrollbar { width: 4px; }
+  .panel-content::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .detail-field { margin-bottom: 14px; }
+  .detail-key { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; font-family: var(--ui); font-weight: 600; }
+  .detail-val {
+    font-family: var(--mono); font-size: 0.78rem; color: var(--text);
+    word-break: break-all; line-height: 1.5; padding: 8px 10px;
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 2px;
+  }
+  .detail-val.err { color: var(--err); }
+  .detail-val.warn { color: var(--warn); }
+  .detail-val.info { color: var(--accent); }
+
+  .no-select { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--dim); text-align: center; gap: 10px; }
+  .no-select svg { opacity: 0.2; }
+  .no-select p { font-size: 0.78rem; line-height: 1.6; }
+
+  .chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 48px; padding: 4px 0; }
+  .chart-bar { flex: 1; border-radius: 2px 2px 0 0; cursor: pointer; }
+  .chart-bar:hover { opacity: 0.7; }
+  .chart-labels { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.6rem; color: var(--dim); margin-top: 4px; }
+
+  /* Refresh indicator */
+  .refresh-badge {
+    font-family: var(--mono); font-size: 0.65rem; color: var(--dim);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .refresh-badge.loading { color: var(--accent); }
+
+  .empty-state { padding: 40px 20px; text-align: center; font-family: var(--mono); font-size: 0.75rem; color: var(--dim); line-height: 2; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 34,10 34,26 18,34 2,26 2,10" stroke="#00d4ff" stroke-width="1.5" fill="rgba(0,212,255,0.05)"/>
+        <polygon points="18,8 28,13 28,23 18,28 8,23 8,13" fill="rgba(0,212,255,0.1)" stroke="#00d4ff" stroke-width="0.5"/>
+        <circle cx="18" cy="18" r="4" fill="#00d4ff"/>
+      </svg>
+    </div>
+    <div class="logo-text">Five<span>M</span> Logs</div>
+  </div>
+  <div class="header-right">
+    <div class="header-status">
+      <span class="status-dot" id="serverStatus">CONNECTÉ</span>
+      <span id="headerTime" style="font-family:var(--mono);font-size:0.72rem;color:var(--accent)">--:--:--</span>
+    </div>
+    <div class="user-badge" id="userBadge" style="display:none">
+      <img class="user-avatar" id="userAvatar" src="" alt="">
+      <span class="user-name" id="userName"></span>
+    </div>
+    <a href="/auth/logout" class="btn-logout">Déconnexion</a>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Vues</div>
+      <div class="sidebar-item active" onclick="setView(this,'all')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+        Tous les logs
+        <span class="badge" id="badge-all">—</span>
+      </div>
+      <div class="sidebar-item err-item" onclick="setView(this,'errors')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v5M8 11v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Erreurs
+        <span class="badge" id="badge-errors">—</span>
+      </div>
+      <div class="sidebar-item" onclick="setView(this,'warnings')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L15 14H1L8 1Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Alertes
+        <span class="badge" id="badge-warnings">—</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Ressources</div>
+      <div class="sidebar-item" onclick="filterRes(this,'esx_core')"><span class="dot" style="background:#00e676"></span>esx_core</div>
+      <div class="sidebar-item" onclick="filterRes(this,'es_extended')"><span class="dot" style="background:#00d4ff"></span>es_extended</div>
+      <div class="sidebar-item" onclick="filterRes(this,'vrp_base')"><span class="dot" style="background:#ff6b35"></span>vrp_base</div>
+      <div class="sidebar-item" onclick="filterRes(this,'mysql-async')"><span class="dot" style="background:#ffcc00"></span>mysql-async</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Actions</div>
+      <div class="sidebar-item" onclick="togglePause()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12"/><rect x="9" y="2" width="4" height="12"/></svg>
+        <span id="pauseLabel">Pause</span>
+      </div>
+      <div class="sidebar-item" onclick="exportLogs()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2v8M5 7l3 4 3-4M3 12v2h10v-2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        Exporter .log
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="toolbar">
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#4a5568" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
+        <input type="text" id="searchInput" placeholder="Rechercher dans les logs..." oninput="applyFilters()">
+      </div>
+      <div class="filter-btns">
+        <button class="filter-btn active" data-level="ALL" onclick="setLevel(this)">Tout</button>
+        <button class="filter-btn" data-level="INFO" onclick="setLevel(this)">Info</button>
+        <button class="filter-btn warn" data-level="WARN" onclick="setLevel(this)">Warn</button>
+        <button class="filter-btn err" data-level="ERROR" onclick="setLevel(this)">Error</button>
+        <button class="filter-btn" data-level="DEBUG" onclick="setLevel(this)">Debug</button>
+      </div>
+      <div class="toolbar-right">
+        <div class="refresh-badge" id="refreshBadge">—</div>
+        <button class="icon-btn" title="Rafraîchir maintenant" onclick="fetchLogs()">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 8A6 6 0 1 1 8 2M14 2v4h-4"/></svg>
+        </button>
+        <button class="icon-btn" title="Auto-scroll" id="scrollBtn" onclick="toggleScroll()" style="color:var(--accent)">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v10M4 9l4 5 4-5"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-num info" id="cInfo">0</span><span class="stat-label">Info</span></div>
+      <div class="stat"><span class="stat-num warn" id="cWarn">0</span><span class="stat-label">Warn</span></div>
+      <div class="stat"><span class="stat-num err"  id="cErr">0</span><span class="stat-label">Error</span></div>
+      <div class="stat"><span class="stat-num ok"   id="cDbg">0</span><span class="stat-label">Debug</span></div>
+      <div class="stat" style="margin-left:auto;border-right:none;padding-right:0">
+        <span class="stat-num" id="cTotal" style="color:var(--text)">0</span>
+        <span class="stat-label">Total</span>
+      </div>
+    </div>
+
+    <div class="log-container" id="logContainer">
+      <table class="log-table">
+        <thead><tr>
+          <th style="width:130px">Horodatage</th>
+          <th style="width:70px">Niveau</th>
+          <th style="width:110px">Ressource</th>
+          <th>Message</th>
+        </tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="panel-header">Détail<span id="closeBtn" style="cursor:pointer;opacity:0.5;display:none" onclick="closeDetail()">✕</span></div>
+    <div class="panel-content" id="detailPanel">
+      <div class="no-select">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="8" width="32" height="24" rx="3" stroke="#4a5568" stroke-width="1.5"/><path d="M10 16h20M10 22h14" stroke="#4a5568" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <p>Cliquez sur une ligne<br>pour voir les détails</p>
+      </div>
+    </div>
+    <div class="panel-header" style="border-top:1px solid var(--border)">
+      Activité (dernière minute)
+    </div>
+    <div style="padding:12px 16px">
+      <div class="chart-bars" id="chartBars"></div>
+      <div class="chart-labels"><span>-60s</span><span>-30s</span><span>now</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let allLogs = [];
+let filtered = [];
+let currentView = 'all';
+let activeLevel = 'ALL';
+let resourceFilter = null;
+let selectedId = null;
+let paused = false;
+let autoScroll = true;
+let activityBuckets = new Array(20).fill(0);
+let pollInterval = null;
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  // Récupère les infos user
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) { window.location.href = '/login.html'; return; }
+    const user = await res.json();
+    document.getElementById('userAvatar').src = user.avatar;
+    document.getElementById('userName').textContent = user.username;
+    document.getElementById('userBadge').style.display = 'flex';
+  } catch(e) {
+    window.location.href = '/login.html';
+    return;
+  }
+
+  await fetchLogs();
+  startPolling();
+
+  setInterval(() => {
+    document.getElementById('headerTime').textContent = new Date().toLocaleTimeString('fr-FR');
+    updateChart();
+  }, 1000);
+}
+
+// ─── Polling des logs ─────────────────────────────────────────────────────────
+function startPolling() {
+  pollInterval = setInterval(() => {
+    if (!paused) fetchLogs();
+  }, 5000); // Refresh toutes les 5 secondes
+}
+
+async function fetchLogs() {
+  const badge = document.getElementById('refreshBadge');
+  badge.textContent = 'Actualisation...';
+  badge.className = 'refresh-badge loading';
+
+  try {
+    const res = await fetch('/api/logs');
+    const data = await res.json();
+
+    if (data.ok && data.logs) {
+      allLogs = data.logs;
+      activityBuckets[activityBuckets.length - 1] += data.logs.length;
+      applyFilters();
+      updateStats();
+      updateBadges();
+      badge.textContent = 'Mis à jour ' + new Date().toLocaleTimeString('fr-FR');
+      badge.className = 'refresh-badge';
+    }
+
+    if (data.message) {
+      // Fichier log non trouvé — affiche un message
+      document.getElementById('logBody').innerHTML = `<tr><td colspan="4"><div class="empty-state">⚠️ ${data.message}<br><br>Configure <strong>LOG_FILE</strong> dans ton fichier <strong>.env</strong></div></td></tr>`;
+    }
+  } catch(e) {
+    badge.textContent = 'Erreur réseau';
+    badge.className = 'refresh-badge';
+    document.getElementById('serverStatus').textContent = 'HORS LIGNE';
+  }
+}
+
+// ─── Filtres ──────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+
+  filtered = allLogs.filter(l => {
+    if (activeLevel !== 'ALL' && l.level !== activeLevel) return false;
+    if (currentView === 'errors'   && l.level !== 'ERROR') return false;
+    if (currentView === 'warnings' && l.level !== 'WARN')  return false;
+    if (resourceFilter && l.source !== resourceFilter) return false;
+    if (q && !l.message.toLowerCase().includes(q) && !l.source.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  renderLogs();
+}
+
+function setView(el, view) {
+  currentView = view;
+  resourceFilter = null;
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  applyFilters();
+}
+
+function filterRes(el, res) {
+  resourceFilter = resourceFilter === res ? null : res;
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  if (resourceFilter) el.classList.add('active');
+  applyFilters();
+}
+
+function setLevel(btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeLevel = btn.dataset.level;
+  applyFilters();
+}
+
+// ─── Rendu ────────────────────────────────────────────────────────────────────
+function renderLogs() {
+  const tbody = document.getElementById('logBody');
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  tbody.innerHTML = '';
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Aucun log à afficher</div></td></tr>';
+    return;
+  }
+
+  filtered.slice(-500).forEach(l => {
+    const tr = document.createElement('tr');
+    tr.className = `log-row level-${l.level}${selectedId === l.id ? ' selected' : ''}`;
+    tr.onclick = () => selectLog(l, tr);
+
+    let msg = esc(l.message);
+    if (q) {
+      const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      msg = msg.replace(re, '<span class="highlight">$1</span>');
+    }
+
+    tr.innerHTML = `
+      <td class="td-time">${l.timeStr || '—'}</td>
+      <td class="td-level"><span class="level-badge-${l.level}">${l.level}</span></td>
+      <td class="td-source">${esc(l.source || '—')}</td>
+      <td class="td-msg">${msg}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  if (autoScroll) {
+    const c = document.getElementById('logContainer');
+    c.scrollTop = c.scrollHeight;
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateStats() {
+  const c = {INFO:0, WARN:0, ERROR:0, DEBUG:0};
+  allLogs.forEach(l => { if (c[l.level] !== undefined) c[l.level]++; });
+  document.getElementById('cInfo').textContent  = c.INFO;
+  document.getElementById('cWarn').textContent  = c.WARN;
+  document.getElementById('cErr').textContent   = c.ERROR;
+  document.getElementById('cDbg').textContent   = c.DEBUG;
+  document.getElementById('cTotal').textContent = allLogs.length;
+}
+
+function updateBadges() {
+  const c = {INFO:0, WARN:0, ERROR:0};
+  allLogs.forEach(l => { if (c[l.level] !== undefined) c[l.level]++; });
+  document.getElementById('badge-all').textContent      = allLogs.length;
+  document.getElementById('badge-errors').textContent   = c.ERROR;
+  document.getElementById('badge-warnings').textContent = c.WARN;
+}
+
+// ─── Détail ───────────────────────────────────────────────────────────────────
+function selectLog(log, tr) {
+  selectedId = log.id;
+  document.querySelectorAll('.log-row').forEach(r => r.classList.remove('selected'));
+  tr.classList.add('selected');
+  const lc = log.level === 'ERROR' ? 'err' : log.level === 'WARN' ? 'warn' : 'info';
+  document.getElementById('detailPanel').innerHTML = `
+    <div class="detail-field"><div class="detail-key">Horodatage</div><div class="detail-val">${esc(log.timeStr || '—')}</div></div>
+    <div class="detail-field"><div class="detail-key">Niveau</div><div class="detail-val ${lc}">${log.level}</div></div>
+    <div class="detail-field"><div class="detail-key">Ressource</div><div class="detail-val">${esc(log.source || '—')}</div></div>
+    <div class="detail-field"><div class="detail-key">Message complet</div><div class="detail-val" style="white-space:pre-wrap;word-break:break-word">${esc(log.message)}</div></div>
+    <div class="detail-field"><div class="detail-key">Ligne brute</div><div class="detail-val" style="color:var(--dim);font-size:0.7rem;white-space:pre-wrap">${esc(log.raw || '—')}</div></div>`;
+  document.getElementById('closeBtn').style.display = 'block';
+}
+
+function closeDetail() {
+  selectedId = null;
+  document.querySelectorAll('.log-row').forEach(r => r.classList.remove('selected'));
+  document.getElementById('detailPanel').innerHTML = `<div class="no-select"><svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="8" width="32" height="24" rx="3" stroke="#4a5568" stroke-width="1.5"/><path d="M10 16h20M10 22h14" stroke="#4a5568" stroke-width="1.5" stroke-linecap="round"/></svg><p>Cliquez sur une ligne<br>pour voir les détails</p></div>`;
+  document.getElementById('closeBtn').style.display = 'none';
+}
+
+// ─── Chart ────────────────────────────────────────────────────────────────────
+function updateChart() {
+  activityBuckets.shift();
+  activityBuckets.push(0);
+  const max = Math.max(...activityBuckets, 1);
+  document.getElementById('chartBars').innerHTML = activityBuckets.map((v, i) => {
+    const h = Math.round((v / max) * 44) + 2;
+    const alpha = 0.3 + (i / activityBuckets.length) * 0.7;
+    return `<div class="chart-bar" style="height:${h}px;background:rgba(0,212,255,${alpha})" title="${v} logs"></div>`;
+  }).join('');
+}
+
+// ─── Contrôles ────────────────────────────────────────────────────────────────
+function togglePause() {
+  paused = !paused;
+  document.getElementById('pauseLabel').textContent = paused ? 'Reprendre' : 'Pause';
+}
+
+function toggleScroll() {
+  autoScroll = !autoScroll;
+  document.getElementById('scrollBtn').style.color = autoScroll ? 'var(--accent)' : 'var(--dim)';
+}
+
+function exportLogs() {
+  const lines = allLogs.map(l => `[${l.timeStr}] [${l.level}] [${l.source}] ${l.message}`).join('\n');
+  const blob = new Blob([lines], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `fivem-logs-${new Date().toISOString().slice(0,10)}.log`;
+  a.click();
+}
+
+init();
+</script>
+</body>
+</html>
